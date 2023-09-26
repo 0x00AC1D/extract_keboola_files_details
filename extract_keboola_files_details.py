@@ -34,6 +34,7 @@ while True:
 
     if response.status_code // 100 != 2:
         logging.info(f'Request with offset: {offset} and limit: {limit} failed with status code: {response.status_code}')
+        logging.info(f'Failed request body: {response.text}')
 
         if retries >= MAX_RETRIES:
             logging.error(f'Request attempts with offset: {offset} and limit: {limit} reached max retries: {MAX_RETRIES}')
