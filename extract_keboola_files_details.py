@@ -1,4 +1,6 @@
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 import json
 import time
 import csv
@@ -8,7 +10,6 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 URL_ENDPOINT = 'https://connection.keboola.com/v2/storage/files'
-RETRY_INTERVAL = 3
 MAX_RETRIES = 2
 OUTPUT_FIELDS = ('created', 'creatorToken', 'id', 'isEncrypted', 'isPublic', 'isSliced', 
     'maxAgeDays', 'name', 'provider', 'region', 'runId', 'runIds', 'sizeBytes', 'tags', 'url')
@@ -24,25 +25,22 @@ params = {
     'showExpired': 'true'
 }
 retries = 0
+session = requests.Session()
+retry_policy = Retry(total=MAX_RETRIES, status_forcelist=tuple(range(400, 600)))
+session.mount('http://', HTTPAdapter(max_retries=retry_policy))
+session.mount('https://', HTTPAdapter(max_retries=retry_policy))
+
 
 with open('output.csv', 'w', newline='') as output_file:
     writer = csv.DictWriter(output_file, fieldnames=OUTPUT_FIELDS, delimiter=';')
     writer.writeheader()
 
     while True:
-        response = requests.get(URL_ENDPOINT, headers=headers, params={**params, 'offset': offset})
+        response = session.get(URL_ENDPOINT, headers=headers, params={**params, 'offset': offset})
 
         if response.status_code // 100 != 2:
             logging.info(f'Request with offset: {offset} and limit: {limit} failed with status code: {response.status_code}')
             logging.info(f'Failed request body: {response.text}')
-
-            if retries >= MAX_RETRIES:
-                logging.error(f'Request attempts with offset: {offset} and limit: {limit} reached max retries: {MAX_RETRIES}')
-                raise Exception('Max request retries reached')
-
-            logging.info(f'Retrying in {RETRY_INTERVAL} seconds')
-            time.sleep(RETRY_INTERVAL)
-            retries += 1
             continue
         
         if not response.json():
