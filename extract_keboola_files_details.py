@@ -36,13 +36,7 @@ with open('output.csv', 'w', newline='') as output_file:
     writer.writeheader()
 
     while True:
-        response = session.get(URL_ENDPOINT, headers=headers, params={**params, 'offset': offset})
-
-        if response.status_code // 100 != 2:
-            logging.info(f'Request with offset: {offset} and limit: {limit} failed with status code: {response.status_code}')
-            logging.info(f'Failed request body: {response.text}')
-            continue
-        
+        response = session.get(URL_ENDPOINT, headers=headers, params={**params, 'offset': offset})        
         if not response.json():
             logging.info(f'Request with offset: {offset} and limit: {limit} returned no data')
             break
